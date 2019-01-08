@@ -12,11 +12,11 @@ game = hlt.Game()
 game.ready("ZalmarBot v17")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS // 2
+TURNS_LIMIT = constants.MAX_TURNS // 1.9
 MAP_SIZE = game.game_map.height
-SHIPS_LIMIT = MAP_SIZE
-HALITE_LIMIT = constants.MAX_HALITE * 0.05
-COLLECTION_LIMIT = constants.MAX_HALITE * 0.90
+SHIPS_LIMIT = MAP_SIZE * 1.25
+HALITE_LIMIT = constants.MAX_HALITE * 0.03
+COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
 
 logging.info(f'Successfully created bot! My Player ID is {game.my_id}.')
 logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
@@ -30,9 +30,9 @@ while True:
 
     command_queue = []
 
-    all_positions = [(y, x) for x in range(MAP_SIZE) for y in range(MAP_SIZE)]
-    all_halite = {position: game.game_map[Position(*position)].halite_amount for position in all_positions}
-    all_halite = sorted(all_halite, key=all_halite.get, reverse=True)
+    map_positions = [(y, x) for x in range(MAP_SIZE) for y in range(MAP_SIZE)]
+    all_positions = {position: game.game_map[Position(*position)].halite_amount for position in map_positions}
+    all_positions = sorted(all_positions, key=all_positions.get, reverse=True)
 
     next_positions_list = [ship.position for ship in me.get_ships()]
     logging.info(f'Next list pos {next_positions_list}')
