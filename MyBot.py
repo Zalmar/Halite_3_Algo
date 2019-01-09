@@ -5,7 +5,6 @@ import hlt
 from hlt import constants
 from hlt.positionals import Direction, Position
 import logging
-import random
 
 
 def directional(position):
@@ -13,16 +12,16 @@ def directional(position):
     for direction in game_map.get_unsafe_moves(ship.position, position):
         target_position = ship.position.directional_offset(direction)
         if target_position not in next_positions_list:
-            move = direction
-            return move
+            m = direction
+            return m
     return
 
 
 def save_move():
     for pos in ship.position.get_surrounding_cardinals():
         if pos not in next_positions_list:
-            move = game_map.get_unsafe_moves(ship.position, pos)[0]
-            return move
+            m = game_map.get_unsafe_moves(ship.position, pos)[0]
+            return m
     return
 
 
@@ -67,25 +66,6 @@ while True:
         if ship_status[ship.id] == "returning":
             if ship.position == me.shipyard.position:
                 ship_status[ship.id] = "exploring"
-            else:
-
-                move = directional(me.shipyard.position)
-
-                if move is None:
-                    move = save_move()
-                    if move is None:
-                        move = Direction.Still
-
-                next_position = ship.position.directional_offset(move)
-
-                if next_position != ship.position:
-                    next_positions_list = list(set(next_positions_list))
-                    next_positions_list.remove(ship.position)
-                    next_positions_list.append(next_position)
-
-                command_queue.append(ship.move(move))
-                logging.info(f'#{ship.id} {ship.position} Next -> {next_position} move -> {move}')
-                continue
 
         elif ship.halite_amount >= COLLECTION_LIMIT:
             ship_status[ship.id] = "returning"
@@ -120,6 +100,16 @@ while True:
         else:
             move = Direction.Still
             next_position = ship.position
+
+        if ship_status[ship.id] == "returning":
+            move = directional(me.shipyard.position)
+
+            if move is None:
+                move = save_move()
+                if move is None:
+                    move = Direction.Still
+
+            next_position = ship.position.directional_offset(move)
 
         if next_position != ship.position:
             next_positions_list = list(set(next_positions_list))
