@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Python 3.6
-# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot.py" "python MyBot.py"
+# halite.exe --replay-directory replays/ -vvv --width 48 --height 48 "python MyBot17.py" "python MyBot.py"
 import hlt
 from hlt import constants
 from hlt.positionals import Direction, Position
@@ -47,12 +47,12 @@ def ship_halite_scan():
 
 
 game = hlt.Game()
-game.ready("ZalmarBot v17")
+game.ready("ZalmarBot v18")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS // 1.95
+TURNS_LIMIT = constants.MAX_TURNS // 1.7
 MAP_SIZE = game.game_map.height
-SHIPS_LIMIT = MAP_SIZE * 1.25
+SHIPS_LIMIT = MAP_SIZE * 1.4
 HALITE_LIMIT = constants.MAX_HALITE * 0.05
 COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
 DROPOFF_COUNT = 0
@@ -64,6 +64,10 @@ logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
 ship_status = {}
 
 ship_target_position = {}
+
+if MAP_SIZE < 48:
+    TURNS_LIMIT = constants.MAX_TURNS // 1.95
+    SHIPS_LIMIT = MAP_SIZE * 1.25
 
 while True:
     game.update_frame()
@@ -78,13 +82,49 @@ while True:
 
     next_positions_list = [ship.position for ship in me.get_ships()]
 
-    """Spawn ship"""
-    if game.turn_number <= TURNS_LIMIT and len(me.get_ships()) < SHIPS_LIMIT:
+    """Ship spawn"""
+    if len(me.get_ships()) < MAP_SIZE and DROPOFF_COUNT < 1:
+        ship_spawn = True
+    elif DROPOFF_COUNT >= 1:
+        ship_spawn = True
+    else:
+        ship_spawn = False
+
+    if game.turn_number <= TURNS_LIMIT and ship_spawn and len(me.get_ships()) < SHIPS_LIMIT:
         if me.halite_amount >= constants.SHIP_COST and not game_map[me.shipyard].is_occupied:
             command_queue.append(me.shipyard.spawn())
             next_positions_list.append(me.shipyard.position)
 
+    last_turn = constants.MAX_TURNS - game.turn_number
+
+    max_distance_to_home = 0
+    max_distance_to_dropoff = 0
+
+    if len(me.get_ships()) > 0:
+        max_distance_to_home = max([
+            game_map.calculate_distance(ship.position, me.shipyard.position) for ship in me.get_ships()])
+        max_distance_to_dropoff = max(
+            [game_map.calculate_distance(ship.position, dropoff_position) for ship in me.get_ships()])
+
     for ship in me.get_ships():
+        if last_turn < max_distance_to_home // 1.2 or last_turn < max_distance_to_dropoff // 1.2:
+            distance_to_home = game_map.calculate_distance(ship.position, me.shipyard.position)
+            distance_to_dropoff = game_map.calculate_distance(ship.position, dropoff_position)
+            if distance_to_home > distance_to_dropoff:
+                if distance_to_dropoff == 1:
+                    command_queue.append(ship.move(game_map.get_unsafe_moves(ship.position, dropoff_position)[0]))
+                    continue
+                else:
+                    command_queue.append(ship.move(game_map.naive_navigate(ship, dropoff_position)))
+                    continue
+            else:
+                if distance_to_home == 1:
+                    command_queue.append(ship.move(game_map.get_unsafe_moves(ship.position, me.shipyard.position)[0]))
+                    continue
+                else:
+                    command_queue.append(ship.move(game_map.naive_navigate(ship, me.shipyard.position)))
+                    continue
+
         if ship.id not in ship_status:
             ship_status[ship.id] = "exploring"
 
@@ -96,7 +136,7 @@ while True:
             ship_status[ship.id] = "returning"
 
         if DROPOFF_COUNT < 1:
-            if ship_halite_scan() > 1000 and me.halite_amount > constants.DROPOFF_COST:
+            if ship_halite_scan() > 900 and me.halite_amount > constants.DROPOFF_COST:
                 if game_map.calculate_distance(ship.position, me.shipyard.position) > game_map.width // 2.5:
                     dropoff_position = ship.position
                     DROPOFF_COUNT += 1
@@ -189,5 +229,3 @@ while True:
         logging.info(f'#{ship.id} {ship.position} Next -> {next_position} move -> {move} is {flag_move}')
 
     game.end_turn(command_queue)
-
-    logging.info(f'Next list pos {next_positions_list}')
