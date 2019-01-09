@@ -39,6 +39,13 @@ def target_max_halite(n=1):
     return
 
 
+def ship_halite_scan():
+    halite = 0
+    for p in ship.position.get_surrounding_cardinals():
+        halite += game_map[p].halite_amount
+    return halite
+
+
 game = hlt.Game()
 game.ready("ZalmarBot v17")
 
@@ -48,6 +55,8 @@ MAP_SIZE = game.game_map.height
 SHIPS_LIMIT = MAP_SIZE * 1.25
 HALITE_LIMIT = constants.MAX_HALITE * 0.05
 COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
+DROPOFF_COUNT = 0
+dropoff_position = Position(0, 0)
 
 logging.info(f'Successfully created bot! My Player ID is {game.my_id}.')
 logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
@@ -80,11 +89,19 @@ while True:
             ship_status[ship.id] = "exploring"
 
         if ship_status[ship.id] == "returning":
-            if ship.position == me.shipyard.position:
+            if ship.position == me.shipyard.position or ship.position == dropoff_position:
                 ship_status[ship.id] = "exploring"
 
         elif ship.halite_amount >= COLLECTION_LIMIT:
             ship_status[ship.id] = "returning"
+
+        if DROPOFF_COUNT < 1:
+            if ship_halite_scan() > 1000 and me.halite_amount > constants.DROPOFF_COST:
+                if game_map.calculate_distance(ship.position, me.shipyard.position) > game_map.width // 2.5:
+                    dropoff_position = ship.position
+                    DROPOFF_COUNT += 1
+                    command_queue.append(ship.make_dropoff())
+                    continue
 
         move = None
         flag_move = False
@@ -142,12 +159,23 @@ while True:
             next_position = ship.position
 
         if ship_status[ship.id] == "returning":
-            move = directional(me.shipyard.position)
-
-            if move is None:
-                move = save_move()
+            if DROPOFF_COUNT > 0:
+                distance_to_home = game_map.calculate_distance(ship.position, me.shipyard.position)
+                distance_to_dropoff = game_map.calculate_distance(ship.position, dropoff_position)
+                if distance_to_home < distance_to_dropoff:
+                    move = directional(me.shipyard.position)
+                else:
+                    move = directional(dropoff_position)
                 if move is None:
-                    move = Direction.Still
+                    move = save_move()
+                    if move is None:
+                        move = Direction.Still
+            else:
+                move = directional(me.shipyard.position)
+                if move is None:
+                    move = save_move()
+                    if move is None:
+                        move = Direction.Still
 
             next_position = ship.position.directional_offset(move)
 
