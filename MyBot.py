@@ -9,12 +9,12 @@ import logging
 
 def directional(position):
     """return next pos"""
+    m = None
     for direction in game_map.get_unsafe_moves(ship.position, position):
-        target_position = ship.position.directional_offset(direction)
-        if target_position not in next_positions_list:
+        target_pos = ship.position.directional_offset(direction)
+        if target_pos not in next_positions_list:
             m = direction
-            return m
-    return
+    return m
 
 
 def save_move():
@@ -25,20 +25,36 @@ def save_move():
     return
 
 
+def target_max_halite(n=1):
+    for position in all_positions:
+        target_pos = Position(*position)
+        target_dis = game_map.calculate_distance(ship.position, target_pos)
+        if target_dis < MAP_SIZE // n and game_map[target_pos].halite_amount >= HALITE_LIMIT:
+            m = directional(target_pos)
+            if m is not None:
+                ship_target_position[ship.id] = target_pos
+                all_positions.remove(position)
+                logging.info(f'MODE DISTANCE - {n} target->{target_pos}')
+                return m
+    return
+
+
 game = hlt.Game()
 game.ready("ZalmarBot v17")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS // 1.9
+TURNS_LIMIT = constants.MAX_TURNS // 1.95
 MAP_SIZE = game.game_map.height
 SHIPS_LIMIT = MAP_SIZE * 1.25
-HALITE_LIMIT = constants.MAX_HALITE * 0.03
+HALITE_LIMIT = constants.MAX_HALITE * 0.05
 COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
 
 logging.info(f'Successfully created bot! My Player ID is {game.my_id}.')
 logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
 
 ship_status = {}
+
+ship_target_position = {}
 
 while True:
     game.update_frame()
@@ -83,20 +99,44 @@ while True:
             flag_move = False
 
         if flag_move:
-            max_halite = 0
-            for position in ship.position.get_surrounding_cardinals():
-                if game_map[position].halite_amount > max_halite:
-                    next_position = position
-                    max_halite = game_map[position].halite_amount
+            if move is None:
+                if (ship.id in ship_target_position
+                        and ship_target_position[ship.id] != ship.position
+                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
+                    move = directional(ship_target_position[ship.id])
+                else:
+                    move = target_max_halite(10)
 
-            if next_position is not None and next_position not in next_positions_list:
-                move = game_map.get_unsafe_moves(ship.position, next_position)[0]
-            else:
+            if move is None:
+                if (ship.id in ship_target_position
+                        and ship_target_position[ship.id] != ship.position
+                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
+                    move = directional(ship_target_position[ship.id])
+                else:
+                    move = target_max_halite(5)
+
+            if move is None:
+                if (ship.id in ship_target_position
+                        and ship_target_position[ship.id] != ship.position
+                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
+                    move = directional(ship_target_position[ship.id])
+                else:
+                    move = target_max_halite(3)
+
+            if move is None:
+                if (ship.id in ship_target_position
+                        and ship_target_position[ship.id] != ship.position
+                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
+                    move = directional(ship_target_position[ship.id])
+                else:
+                    move = target_max_halite()
+
+            if move is None:
                 move = save_move()
                 if move is None:
                     move = Direction.Still
 
-                next_position = ship.position.directional_offset(move)
+            next_position = ship.position.directional_offset(move)
         else:
             move = Direction.Still
             next_position = ship.position
