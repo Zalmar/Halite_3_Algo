@@ -8,6 +8,24 @@ import logging
 import random
 
 
+def directional(position):
+    """return next pos"""
+    for direction in game_map.get_unsafe_moves(ship.position, position):
+        target_position = ship.position.directional_offset(direction)
+        if target_position not in next_positions_list:
+            move = direction
+            return move
+    return
+
+
+def save_move():
+    for pos in ship.position.get_surrounding_cardinals():
+        if pos not in next_positions_list:
+            move = game_map.get_unsafe_moves(ship.position, pos)[0]
+            return move
+    return
+
+
 game = hlt.Game()
 game.ready("ZalmarBot v17")
 
@@ -35,7 +53,6 @@ while True:
     all_positions = sorted(all_positions, key=all_positions.get, reverse=True)
 
     next_positions_list = [ship.position for ship in me.get_ships()]
-    logging.info(f'Next list pos {next_positions_list}')
 
     """Spawn ship"""
     if game.turn_number <= TURNS_LIMIT and len(me.get_ships()) < SHIPS_LIMIT:
@@ -51,65 +68,58 @@ while True:
             if ship.position == me.shipyard.position:
                 ship_status[ship.id] = "exploring"
             else:
-                move = None
-                for direction in game_map.get_unsafe_moves(ship.position, me.shipyard.position):
-                    target_position = ship.position.directional_offset(direction)
-                    if target_position not in next_positions_list:
-                        next_position = target_position
-                        move = direction
-                        break
+
+                move = directional(me.shipyard.position)
 
                 if move is None:
-                    move = Direction.Still
-                    next_position = ship.position
-                else:
+                    move = save_move()
+                    if move is None:
+                        move = Direction.Still
+
+                next_position = ship.position.directional_offset(move)
+
+                if next_position != ship.position:
                     next_positions_list = list(set(next_positions_list))
-                    next_positions_list.append(next_position)
                     next_positions_list.remove(ship.position)
+                    next_positions_list.append(next_position)
 
                 command_queue.append(ship.move(move))
-                logging.info('returning')
+                logging.info(f'#{ship.id} {ship.position} Next -> {next_position} move -> {move}')
                 continue
 
         elif ship.halite_amount >= COLLECTION_LIMIT:
             ship_status[ship.id] = "returning"
 
         move = None
-        flag_move = None
+        flag_move = False
         next_position = None
 
-        if game_map[ship.position].halite_amount >= HALITE_LIMIT and ship_status[ship.id] == "exploring":
-            move = Direction.Still
-            next_position = ship.position
-            flag_move = False
+        if ship.halite_amount >= game_map[ship.position].halite_amount * 0.10:
+            flag_move = True
         else:
-            if ship.halite_amount >= game_map[ship.position].halite_amount * 0.10:
-                flag_move = True
-            else:
-                flag_move = False
+            flag_move = False
+
+        if game_map[ship.position].halite_amount >= HALITE_LIMIT and ship_status[ship.id] == "exploring":
+            flag_move = False
 
         if flag_move:
             max_halite = 0
-
             for position in ship.position.get_surrounding_cardinals():
                 if game_map[position].halite_amount > max_halite:
                     next_position = position
                     max_halite = game_map[position].halite_amount
-                    logging.info(f'#{ship.id} !!!')
 
             if next_position is not None and next_position not in next_positions_list:
                 move = game_map.get_unsafe_moves(ship.position, next_position)[0]
             else:
-                for position in ship.position.get_surrounding_cardinals():
-                    if position not in next_positions_list:
-                        move = game_map.get_unsafe_moves(ship.position, position)[0]
-                        next_position = position
-                        logging.info(f'#{ship.id} !!!')
-                        break
+                move = save_move()
+                if move is None:
+                    move = Direction.Still
+
+                next_position = ship.position.directional_offset(move)
         else:
             move = Direction.Still
             next_position = ship.position
-            logging.info(f'#{ship.id} Stop!')
 
         if next_position != ship.position:
             next_positions_list = list(set(next_positions_list))
