@@ -8,7 +8,6 @@ import logging
 
 
 def directional(position):
-    """return next pos"""
     m = None
     for direction in game_map.get_unsafe_moves(ship.position, position):
         target_pos = ship.position.directional_offset(direction)
@@ -47,7 +46,7 @@ def ship_halite_scan():
 
 
 game = hlt.Game()
-game.ready("ZalmarBot v18")
+game.ready("ZalmarBot v19")
 
 MAX_TURNS = constants.MAX_TURNS
 TURNS_LIMIT = constants.MAX_TURNS // 1.7
@@ -66,8 +65,8 @@ ship_status = {}
 ship_target_position = {}
 
 if MAP_SIZE < 48:
-    TURNS_LIMIT = constants.MAX_TURNS // 1.95
-    SHIPS_LIMIT = MAP_SIZE * 1.25
+    TURNS_LIMIT = constants.MAX_TURNS // 1.85
+    SHIPS_LIMIT = MAP_SIZE * 1.2
 
 while True:
     game.update_frame()
