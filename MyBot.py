@@ -59,7 +59,7 @@ game = hlt.Game()
 game.ready("ZalmarBot v20")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS * 0.6
+TURNS_LIMIT = constants.MAX_TURNS * 0.65
 MAP_SIZE = game.game_map.height
 SHIPS_LIMIT = MAP_SIZE * 1.4
 HALITE_LIMIT = constants.MAX_HALITE * 0.05
@@ -107,7 +107,7 @@ while True:
     # logging.info(f'enemy_ships {enemy_ships}')
 
     """Ship spawn"""
-    if len(me.get_ships()) < SHIPS_LIMIT * 0.7 and DROPOFF_COUNT < 1:
+    if len(me.get_ships()) < MAP_SIZE and DROPOFF_COUNT < 1:
         ship_spawn = True
     elif DROPOFF_COUNT >= 1:
         ship_spawn = True
@@ -160,7 +160,7 @@ while True:
             ship_status[ship.id] = "returning"
 
         if DROPOFF_COUNT < 1:
-            if halite_scan(5) > 12000 and me.halite_amount > constants.DROPOFF_COST:
+            if halite_scan(5) > 14000 and me.halite_amount > constants.DROPOFF_COST:
                 dropoff_position = ship.position
                 DROPOFF_COUNT += 1
                 command_queue.append(ship.make_dropoff())
@@ -185,7 +185,7 @@ while True:
                         and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
                     move = directional(target_position_dict[ship.id])
                 else:
-                    move = target_max_halite(10)
+                    move = target_max_halite(12)
 
             if move is None:
                 if (ship.id in target_position_dict
@@ -193,7 +193,7 @@ while True:
                         and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
                     move = directional(target_position_dict[ship.id])
                 else:
-                    move = target_max_halite(5)
+                    move = target_max_halite(6)
 
             if move is None:
                 if (ship.id in target_position_dict
