@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-bot0 = "MyBot18.py"
+bot0 = "MyBot19.py"
 bot1 = "MyBot.py"
 
 
@@ -10,7 +10,7 @@ def run(size, game_count):
     win1 = 0
     for i in range(game_count):
         command = (f"./halite.exe --replay-directory replays/ -vvv --width "
-                   f"{size} --height {size} --results-as-json".split())
+                   f"{size} --height {size} --seed 123 --results-as-json".split())
 
         command.append(f'python {bot0}')
         command.append(f'python {bot1}')
@@ -44,7 +44,7 @@ def run(size, game_count):
 
 count = 5
 run(32, count)
-run(40, count)
-run(48, count)
-run(56, count)
-run(64, count)
+# run(40, count)
+# run(48, count)
+# run(56, count)
+# run(64, count)

@@ -1,55 +1,65 @@
 #!/usr/bin/env python3
 # Python 3.6
-# halite.exe --replay-directory replays/ -vvv --width 48 --height 48 "python MyBot17.py" "python MyBot.py"
+# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot19.py" "python MyBot.py"
 import hlt
 from hlt import constants
 from hlt.positionals import Direction, Position
 import logging
+import numpy as np
+
+
+def normalize_directional_offset(m):
+    return game_map.normalize(ship.position.directional_offset(m))
 
 
 def directional(position):
     m = None
     for direction in game_map.get_unsafe_moves(ship.position, position):
-        target_pos = ship.position.directional_offset(direction)
-        if target_pos not in next_positions_list:
+        target_position = normalize_directional_offset(direction)
+        if target_position not in next_positions_list and target_position not in enemy_ships:
             m = direction
     return m
 
 
 def save_move():
-    for pos in ship.position.get_surrounding_cardinals():
-        if pos not in next_positions_list:
-            m = game_map.get_unsafe_moves(ship.position, pos)[0]
+    for position in ship.position.get_surrounding_cardinals():
+        if position not in next_positions_list and position not in enemy_ships:
+            m = game_map.get_unsafe_moves(ship.position, position)[0]
             return m
     return
 
 
 def target_max_halite(n=1):
     for position in all_positions:
-        target_pos = Position(*position)
-        target_dis = game_map.calculate_distance(ship.position, target_pos)
-        if target_dis < MAP_SIZE // n and game_map[target_pos].halite_amount >= HALITE_LIMIT:
-            m = directional(target_pos)
-            if m is not None:
-                ship_target_position[ship.id] = target_pos
-                all_positions.remove(position)
-                logging.info(f'MODE DISTANCE - {n} target->{target_pos}')
-                return m
+        target_position = Position(*position)
+        target_distance = game_map.calculate_distance(ship.position, target_position)
+        if target_position not in target_position_dict.values():
+            if target_distance < MAP_SIZE // n and game_map[target_position].halite_amount > HALITE_LIMIT:
+                m = directional(target_position)
+                if m is not None:
+                    target_position_dict[ship.id] = target_position
+                    all_positions.remove(position)
+                    return m
     return
 
 
-def ship_halite_scan():
+def halite_scan(radius):
     halite = 0
-    for p in ship.position.get_surrounding_cardinals():
-        halite += game_map[p].halite_amount
+    for position in get_search_radius(radius):
+        halite += game_map[position].halite_amount
     return halite
 
 
+def get_search_radius(radius):
+    """ returns a list of all positions within square radius of a ship """
+    return [ship.position+Position(i, j) for i in range(-radius, radius+1) for j in range(-radius, radius+1)]
+
+
 game = hlt.Game()
-game.ready("ZalmarBot v19")
+game.ready("ZalmarBot v20")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS // 1.7
+TURNS_LIMIT = constants.MAX_TURNS * 0.6
 MAP_SIZE = game.game_map.height
 SHIPS_LIMIT = MAP_SIZE * 1.4
 HALITE_LIMIT = constants.MAX_HALITE * 0.05
@@ -57,16 +67,16 @@ COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
 DROPOFF_COUNT = 0
 dropoff_position = Position(0, 0)
 
+if MAP_SIZE < 48:
+    TURNS_LIMIT = constants.MAX_TURNS * 0.5
+    SHIPS_LIMIT = MAP_SIZE * 1.1
+
 logging.info(f'Successfully created bot! My Player ID is {game.my_id}.')
 logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
 
 ship_status = {}
 
-ship_target_position = {}
-
-if MAP_SIZE < 48:
-    TURNS_LIMIT = constants.MAX_TURNS // 1.85
-    SHIPS_LIMIT = MAP_SIZE * 1.2
+target_position_dict = {}
 
 while True:
     game.update_frame()
@@ -76,13 +86,28 @@ while True:
     command_queue = []
 
     map_positions = [(y, x) for x in range(MAP_SIZE) for y in range(MAP_SIZE)]
-    all_positions = {position: game.game_map[Position(*position)].halite_amount for position in map_positions}
-    all_positions = sorted(all_positions, key=all_positions.get, reverse=True)
+    all_positions_dict = {position: game.game_map[Position(*position)].halite_amount for position in map_positions}
+    all_positions = sorted(all_positions_dict, key=all_positions_dict.get, reverse=True)
 
     next_positions_list = [ship.position for ship in me.get_ships()]
 
+    mean_halite_on_map = np.mean(list(all_positions_dict.values()))
+    if mean_halite_on_map < HALITE_LIMIT:
+        HALITE_LIMIT /= 2
+
+    """Check enemy ships"""
+    players_list = [player for id_, player in game.players.items() if id_ != me.id]
+    enemy_ships = []
+    for player in players_list:
+        enemy_ships += [Position(*(ship.position.x, ship.position.y)) for ship in player.get_ships()]
+    # for pos in enemy_ships:
+    #     for p in pos.get_surrounding_cardinals():
+    #         if game_map[p].halite_amount > game_map[pos].halite_amount:
+    #             enemy_ships.append(p)
+    # logging.info(f'enemy_ships {enemy_ships}')
+
     """Ship spawn"""
-    if len(me.get_ships()) < MAP_SIZE and DROPOFF_COUNT < 1:
+    if len(me.get_ships()) < SHIPS_LIMIT * 0.7 and DROPOFF_COUNT < 1:
         ship_spawn = True
     elif DROPOFF_COUNT >= 1:
         ship_spawn = True
@@ -135,12 +160,11 @@ while True:
             ship_status[ship.id] = "returning"
 
         if DROPOFF_COUNT < 1:
-            if ship_halite_scan() > 900 and me.halite_amount > constants.DROPOFF_COST:
-                if game_map.calculate_distance(ship.position, me.shipyard.position) > game_map.width // 2.5:
-                    dropoff_position = ship.position
-                    DROPOFF_COUNT += 1
-                    command_queue.append(ship.make_dropoff())
-                    continue
+            if halite_scan(5) > 12000 and me.halite_amount > constants.DROPOFF_COST:
+                dropoff_position = ship.position
+                DROPOFF_COUNT += 1
+                command_queue.append(ship.make_dropoff())
+                continue
 
         move = None
         flag_move = False
@@ -151,39 +175,39 @@ while True:
         else:
             flag_move = False
 
-        if game_map[ship.position].halite_amount >= HALITE_LIMIT and ship_status[ship.id] == "exploring":
+        if game_map[ship.position].halite_amount > HALITE_LIMIT and not ship.is_full:
             flag_move = False
 
         if flag_move:
             if move is None:
-                if (ship.id in ship_target_position
-                        and ship_target_position[ship.id] != ship.position
-                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
-                    move = directional(ship_target_position[ship.id])
+                if (ship.id in target_position_dict
+                        and target_position_dict[ship.id] != ship.position
+                        and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
+                    move = directional(target_position_dict[ship.id])
                 else:
                     move = target_max_halite(10)
 
             if move is None:
-                if (ship.id in ship_target_position
-                        and ship_target_position[ship.id] != ship.position
-                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
-                    move = directional(ship_target_position[ship.id])
+                if (ship.id in target_position_dict
+                        and target_position_dict[ship.id] != ship.position
+                        and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
+                    move = directional(target_position_dict[ship.id])
                 else:
                     move = target_max_halite(5)
 
             if move is None:
-                if (ship.id in ship_target_position
-                        and ship_target_position[ship.id] != ship.position
-                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
-                    move = directional(ship_target_position[ship.id])
+                if (ship.id in target_position_dict
+                        and target_position_dict[ship.id] != ship.position
+                        and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
+                    move = directional(target_position_dict[ship.id])
                 else:
                     move = target_max_halite(3)
 
             if move is None:
-                if (ship.id in ship_target_position
-                        and ship_target_position[ship.id] != ship.position
-                        and game_map[ship_target_position[ship.id]].halite_amount >= HALITE_LIMIT):
-                    move = directional(ship_target_position[ship.id])
+                if (ship.id in target_position_dict
+                        and target_position_dict[ship.id] != ship.position
+                        and game_map[target_position_dict[ship.id]].halite_amount > HALITE_LIMIT):
+                    move = directional(target_position_dict[ship.id])
                 else:
                     move = target_max_halite()
 
@@ -192,7 +216,7 @@ while True:
                 if move is None:
                     move = Direction.Still
 
-            next_position = ship.position.directional_offset(move)
+            next_position = normalize_directional_offset(move)
         else:
             move = Direction.Still
             next_position = ship.position
@@ -216,7 +240,7 @@ while True:
                     if move is None:
                         move = Direction.Still
 
-            next_position = ship.position.directional_offset(move)
+            next_position = normalize_directional_offset(move)
 
         if next_position != ship.position:
             next_positions_list = list(set(next_positions_list))
