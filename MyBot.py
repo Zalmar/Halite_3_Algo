@@ -56,7 +56,7 @@ def get_search_radius(radius):
 
 
 game = hlt.Game()
-game.ready("ZalmarBot v20")
+game.ready("ZalmarBot v21")
 
 MAX_TURNS = constants.MAX_TURNS
 TURNS_LIMIT = constants.MAX_TURNS * 0.65
