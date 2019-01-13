@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Python 3.6
-# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot20.py" "python MyBot.py"
+# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot21.py" "python MyBot.py"
 import hlt
 from hlt import constants
 from hlt.positionals import Direction, Position
@@ -56,7 +56,7 @@ def get_search_radius(radius):
 
 
 game = hlt.Game()
-game.ready("ZalmarBot v21")
+game.ready("ZalmarBot v22")
 
 MAX_TURNS = constants.MAX_TURNS
 TURNS_LIMIT = constants.MAX_TURNS * 0.65
