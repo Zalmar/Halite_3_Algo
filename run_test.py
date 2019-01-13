@@ -9,8 +9,10 @@ def run(size, game_count):
     win0 = 0
     win1 = 0
     for i in range(game_count):
+        # command = (f"./halite.exe --replay-directory replays/ -vvv --width "
+        #            f"{size} --height {size} --seed 1234567 --results-as-json".split())
         command = (f"./halite.exe --replay-directory replays/ -vvv --width "
-                   f"{size} --height {size} --seed 1234567 --results-as-json".split())
+                   f"{size} --height {size} --results-as-json".split())
 
         command.append(f'python {bot0}')
         command.append(f'python {bot1}')
@@ -42,7 +44,7 @@ def run(size, game_count):
         print('-' * 75)
 
 
-count = 1
+count = 5
 run(32, count)
 run(40, count)
 run(48, count)

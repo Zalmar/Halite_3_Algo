@@ -89,11 +89,13 @@ while True:
     all_positions_dict = {position: game.game_map[Position(*position)].halite_amount for position in map_positions}
     all_positions = sorted(all_positions_dict, key=all_positions_dict.get, reverse=True)
 
-    next_positions_list = [ship.position for ship in me.get_ships()]
-
     mean_halite_on_map = np.mean(list(all_positions_dict.values()))
     if mean_halite_on_map < HALITE_LIMIT:
-        HALITE_LIMIT /= 2
+        HALITE_LIMIT = mean_halite_on_map / 2
+
+    next_positions_list = [ship.position for ship in me.get_ships()
+                           if ship.halite_amount < game_map[ship.position].halite_amount * 0.10
+                           or game_map[ship.position].halite_amount > HALITE_LIMIT]
 
     """Check enemy ships"""
     players_list = [player for id_, player in game.players.items() if id_ != me.id]
@@ -160,11 +162,12 @@ while True:
             ship_status[ship.id] = "returning"
 
         if DROPOFF_COUNT < 1:
-            if halite_scan(5) > 14000 and me.halite_amount > constants.DROPOFF_COST:
-                dropoff_position = ship.position
-                DROPOFF_COUNT += 1
-                command_queue.append(ship.make_dropoff())
-                continue
+            if game_map.calculate_distance(ship.position, me.shipyard.position) > MAP_SIZE / 2.5:
+                if halite_scan(5) > 14000 and me.halite_amount > constants.DROPOFF_COST:
+                    dropoff_position = ship.position
+                    DROPOFF_COUNT += 1
+                    command_queue.append(ship.make_dropoff())
+                    continue
 
         move = None
         flag_move = False
@@ -215,8 +218,6 @@ while True:
                 move = save_move()
                 if move is None:
                     move = Direction.Still
-
-            next_position = normalize_directional_offset(move)
         else:
             move = Direction.Still
             next_position = ship.position
@@ -240,11 +241,10 @@ while True:
                     if move is None:
                         move = Direction.Still
 
-            next_position = normalize_directional_offset(move)
+        next_position = normalize_directional_offset(move)
 
         if next_position != ship.position:
             next_positions_list = list(set(next_positions_list))
-            next_positions_list.remove(ship.position)
             next_positions_list.append(next_position)
 
         command_queue.append(ship.move(move))
