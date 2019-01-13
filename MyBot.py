@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Python 3.6
-# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot19.py" "python MyBot.py"
+# halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "python MyBot20.py" "python MyBot.py"
 import hlt
 from hlt import constants
 from hlt.positionals import Direction, Position
@@ -13,12 +13,12 @@ def normalize_directional_offset(m):
 
 
 def directional(position):
-    m = None
     for direction in game_map.get_unsafe_moves(ship.position, position):
         target_position = normalize_directional_offset(direction)
         if target_position not in next_positions_list and target_position not in enemy_ships:
             m = direction
-    return m
+            return m
+    return
 
 
 def save_move():
@@ -69,7 +69,7 @@ dropoff_position = Position(0, 0)
 
 if MAP_SIZE < 48:
     TURNS_LIMIT = constants.MAX_TURNS * 0.5
-    SHIPS_LIMIT = MAP_SIZE * 1.1
+    SHIPS_LIMIT = MAP_SIZE
 
 logging.info(f'Successfully created bot! My Player ID is {game.my_id}.')
 logging.info(f'Max turns is {MAX_TURNS}. Map size is {MAP_SIZE}x{MAP_SIZE}.')
