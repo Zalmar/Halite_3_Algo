@@ -61,7 +61,7 @@ game.ready("ZalmarBot v21")
 MAX_TURNS = constants.MAX_TURNS
 TURNS_LIMIT = constants.MAX_TURNS * 0.65
 MAP_SIZE = game.game_map.height
-SHIPS_LIMIT = MAP_SIZE * 1.4
+SHIPS_LIMIT = MAP_SIZE * 1.35
 HALITE_LIMIT = constants.MAX_HALITE * 0.05
 COLLECTION_LIMIT = constants.MAX_HALITE * 0.95
 DROPOFF_COUNT = 0
