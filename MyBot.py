@@ -59,7 +59,7 @@ game = hlt.Game()
 game.ready("ZalmarBot v22")
 
 MAX_TURNS = constants.MAX_TURNS
-TURNS_LIMIT = constants.MAX_TURNS * 0.65
+TURNS_LIMIT = constants.MAX_TURNS * 0.6
 MAP_SIZE = game.game_map.height
 SHIPS_LIMIT = MAP_SIZE * 1.35
 HALITE_LIMIT = constants.MAX_HALITE * 0.05

@@ -1,7 +1,7 @@
 import json
 import subprocess
 
-bot0 = "MyBot20.py"
+bot0 = "MyBot21.py"
 bot1 = "MyBot.py"
 
 
@@ -45,8 +45,8 @@ def run(size, game_count):
 
 
 count = 5
-run(32, count)
-run(40, count)
+# run(32, count)
+# run(40, count)
 run(48, count)
 run(56, count)
 run(64, count)
