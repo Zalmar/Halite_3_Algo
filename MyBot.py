@@ -163,7 +163,7 @@ while True:
 
         if DROPOFF_COUNT < 1:
             if game_map.calculate_distance(ship.position, me.shipyard.position) > MAP_SIZE / 2.5:
-                if halite_scan(5) > 14000 and me.halite_amount > constants.DROPOFF_COST:
+                if halite_scan(5) > 14000 and me.halite_amount > constants.DROPOFF_COST + 1000:
                     dropoff_position = ship.position
                     DROPOFF_COUNT += 1
                     command_queue.append(ship.make_dropoff())
